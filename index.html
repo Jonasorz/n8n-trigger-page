@@ -26,6 +26,21 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* 新增：不确定进度条的动画 */
+        .progress-bar-indeterminate {
+            width: 40%; /* 滑块的宽度 */
+            animation: slide-indeterminate 2s ease-in-out infinite;
+        }
+
+        @keyframes slide-indeterminate {
+            0% {
+                transform: translateX(-125%); /* 从左侧屏幕外开始 */
+            }
+            100% {
+                transform: translateX(250%); /* 移动到右侧屏幕外结束 */
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
@@ -54,9 +69,9 @@
                 <div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 ml-3 hidden"></div>
             </button>
 
-            <!-- 进度条容器 -->
-            <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden my-4">
-                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-linear" style="width: 0%"></div>
+            <!-- 进度条容器 (已修改：添加了overflow-hidden) -->
+            <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden my-4 overflow-hidden">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full"></div>
             </div>
 
             <!-- 结果显示文本框 -->
@@ -79,8 +94,7 @@
         submitButton.addEventListener('click', async () => {
             // =================================================================
             // 在这里设置超时时长 (单位：毫秒)
-            // 600000 = 600 秒 = 10 分钟
-            const TIMEOUT_DURATION = 600000; 
+            const TIMEOUT_DURATION = 120000; // 2 分钟
             // =================================================================
 
             const n8nWebhookUrl = 'https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
@@ -91,9 +105,10 @@
             buttonText.textContent = '正在执行...';
             loader.classList.remove('hidden');
             resultBox.value = '正在请求工作流，请稍候...';
+            
+            // 已修改：通过添加/移除 class 来控制动画
             progressContainer.classList.remove('hidden');
-            progressBar.style.width = '0%';
-            setTimeout(() => { progressBar.style.width = '50%'; }, 100);
+            progressBar.classList.add('progress-bar-indeterminate');
 
             // --- 超时控制 ---
             const controller = new AbortController();
@@ -102,25 +117,20 @@
             try {
                 const requestUrl = `${n8nWebhookUrl}?option=${encodeURIComponent(selectedOption)}&timestamp=${new Date().getTime()}`;
                 
-                // 在fetch请求中加入signal
                 const response = await fetch(requestUrl, { signal: controller.signal });
                 
-                // 如果请求成功返回，清除超时计时器
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
                     throw new Error(`网络响应错误: ${response.status} ${response.statusText}`);
                 }
                 
-                progressBar.style.width = '100%';
                 const responseText = await response.text();
                 resultBox.value = responseText;
 
             } catch (error) {
-                // 清除超时计时器，以防万一
                 clearTimeout(timeoutId);
                 
-                // 判断是否是超时错误
                 if (error.name === 'AbortError') {
                     resultBox.value = `错误：请求在 ${TIMEOUT_DURATION / 1000} 秒后超时。请检查n8n工作流是否执行时间过长。`;
                 } else {
@@ -129,10 +139,8 @@
                 console.error('请求n8n工作流时出错:', error);
             } finally {
                 // --- UI更新：结束加载状态 ---
-                setTimeout(() => {
-                    progressContainer.classList.add('hidden');
-                    progressBar.style.width = '0%'; 
-                }, 500); 
+                progressBar.classList.remove('progress-bar-indeterminate');
+                progressContainer.classList.add('hidden');
 
                 loader.classList.add('hidden');
                 buttonText.textContent = '提交';
