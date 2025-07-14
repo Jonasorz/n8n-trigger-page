@@ -79,7 +79,7 @@
 
         // 为提交按钮添加点击事件监听器
         submitButton.addEventListener('click', async () => {
-            const n8nWebhookUrl = 'https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
+            const n8nWebhookUrl = 'https://jonascz.xyz/webhook/386dd590-989d-4a4e-af59-a95729c2821a'; 
             const selectedOption = optionSelect.value;
             
             // --- UI更新：开始加载状态 ---
@@ -100,13 +100,13 @@
                 const requestUrl = `${n8nWebhookUrl}?option=${encodeURIComponent(selectedOption)}&timestamp=${new Date().getTime()}`;
                 resultBox.value += `准备向此地址发送请求: ${n8nWebhookUrl}\n`;
 
-                setTimeout(() => { progressBar.style.width = '60%'; }, 500);
+                setTimeout(() => { progressBar.style.width = '30%'; }, 500);
                 resultBox.value += "正在发送网络请求 (fetch)...\n";
 
                 const response = await fetch(requestUrl);
                 
                 resultBox.value += `已收到网络响应。HTTP状态码: ${response.status}\n`;
-                progressBar.style.width = '90%';
+                progressBar.style.width = '60%';
 
                 if (!response.ok) {
                     throw new Error(`网络响应不成功: ${response.status} ${response.statusText}`);
