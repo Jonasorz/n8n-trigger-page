@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>存储器件(DRAM颗粒/DDR模组)价格预测</title>
+    <!-- 引入Tailwind CSS以实现现代化响应式设计 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* 自定义样式 */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* 加载动画样式 */
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 transition-all duration-300">
+        <div class="space-y-6">
+            <!-- 标题 -->
+            <h1 class="text-3xl font-bold text-gray-800 text-center">存储器件(DRAM颗粒/DDR模组)价格预测</h1>
+            <p class="text-center text-gray-500">请从下方选择DRAM颗粒具体规格，然后点击“提交”按钮启动分析。</p>
+
+            <!-- 下拉选项 -->
+            <div class="space-y-2">
+                <label for="workflow-option" class="text-sm font-medium text-gray-700">选项</label>
+                <select id="workflow-option" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <option value="option1">DDR5 16G (2Gx8) 4800/5600</option>
+                    <option value="option2">DDR4 16Gb (1Gx16)3200</option>
+                    <option value="option3">DDR4 16Gb (2Gx8)3200</option>
+                    <option value="option3">DDR4 8Gb (1Gx8) 3200</option>
+                    <option value="option3">DDR4 8Gb (512Mx16) 3200</option>
+                    <option value="option3">DDR3 4Gb 512Mx8 1600/1866</option>
+                </select>
+            </div>
+
+            <!-- 提交按钮 -->
+            <button id="submit-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center">
+                <span id="button-text">提交</span>
+                <!-- 加载动画 (默认隐藏) -->
+                <div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 ml-3 hidden"></div>
+            </button>
+
+            <!-- 新增：进度条容器 (默认隐藏) -->
+            <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden my-4">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-linear" style="width: 0%"></div>
+            </div>
+
+            <!-- 结果显示文本框 -->
+            <div class="space-y-2">
+                <label for="result-box" class="text-sm font-medium text-gray-700">结果</label>
+                <textarea id="result-box" rows="8" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" readonly placeholder="工作流返回的结果将显示在这里..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取页面上的元素
+        const submitButton = document.getElementById('submit-button');
+        const optionSelect = document.getElementById('workflow-option');
+        const resultBox = document.getElementById('result-box');
+        const loader = document.getElementById('loader');
+        const buttonText = document.getElementById('button-text');
+        // 新增：获取进度条元素
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+
+
+        // 为提交按钮添加点击事件监听器
+        submitButton.addEventListener('click', async () => {
+            // *重要*：请将下面的URL替换为您自己的n8n Webhook URL
+            const n8nWebhookUrl = '
+https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
+
+            // 检查是否已填写Webhook URL
+            if (n8nWebhookUrl === 'YOUR_N8N_WEBHOOK_URL_HERE') {
+                resultBox.value = '错误：请先在JavaScript代码中设置您的n8n Webhook URL。';
+                return;
+            }
+
+            const selectedOption = optionSelect.value;
+
+            // --- UI更新：开始加载状态 ---
+            // 禁用按钮并显示按钮内的加载图标
+            submitButton.disabled = true;
+            buttonText.textContent = '正在执行...';
+            loader.classList.remove('hidden');
+            resultBox.value = '正在请求工作流，请稍候...';
+            
+            // 新增：显示并开始模拟进度条动画
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            // 使用一个小的延时来确保CSS渲染了初始的0%宽度
+            setTimeout(() => {
+                // 动画到70%来模拟处理过程
+                progressBar.style.width = '70%'; 
+            }, 100);
+
+
+            try {
+                const requestUrl = `${n8nWebhookUrl}?option=${selectedOption}&timestamp=${new Date().getTime()}`;
+                const response = await fetch(requestUrl);
+
+                if (!response.ok) {
+                    throw new Error(`网络响应错误: ${response.status} ${response.statusText}`);
+                }
+
+                const responseText = await response.text();
+                resultBox.value = responseText;
+
+            } catch (error) {
+                console.error('请求n8n工作流时出错:', error);
+                resultBox.value = `执行工作流时出错: ${error.message}\n\n请检查浏览器控制台获取更多信息，并确保n8n工作流配置正确。`;
+            } finally {
+                // --- UI更新：结束加载状态 ---
+                // 新增：完成进度条动画并隐藏
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    // 为下一次点击重置进度条
+                    progressBar.style.width = '0%'; 
+                }, 500); // 0.5秒后隐藏
+
+                // 恢复按钮状态
+                loader.classList.add('hidden');
+                buttonText.textContent = '提交';
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
