@@ -76,68 +76,71 @@
         const buttonText = document.getElementById('button-text');
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
-        
-        let eventSource; // 将eventSource声明在外部
-
-        // 重置UI到初始状态的函数
-        function resetUI() {
-            progressContainer.classList.add('hidden');
-            progressBar.style.width = '0%';
-            loader.classList.add('hidden');
-            buttonText.textContent = '提交';
-            submitButton.disabled = false;
-        }
 
         // 为提交按钮添加点击事件监听器
-        submitButton.addEventListener('click', () => {
+        submitButton.addEventListener('click', async () => {
             const n8nWebhookUrl = 'https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
             const selectedOption = optionSelect.value;
             
-            // UI更新：开始加载状态
+            // --- UI更新：开始加载状态 ---
             submitButton.disabled = true;
             buttonText.textContent = '正在执行...';
             loader.classList.remove('hidden');
             progressContainer.classList.remove('hidden');
-            progressBar.style.width = '10%';
-            resultBox.value = "正在连接到工作流...\n";
-
-            const requestUrl = `${n8nWebhookUrl}?option=${encodeURIComponent(selectedOption)}&timestamp=${new Date().getTime()}`;
+            progressBar.style.width = '0%';
             
-            eventSource = new EventSource(requestUrl);
-            let isFirstMessage = true;
+            // --- 调试信息：在文本框中显示每一步 ---
+            resultBox.value = "按钮点击已识别。\n";
 
-            eventSource.onopen = function() {
-                resultBox.value = "连接成功！等待工作流数据...\n";
-                progressBar.style.width = '30%';
-            };
-
-            eventSource.onmessage = function(event) {
-                if (event.data === "[DONE]") {
-                    resultBox.value += "\n工作流执行完毕！";
-                    progressBar.style.width = '100%';
-                    eventSource.close();
-                    setTimeout(resetUI, 1000);
-                    return;
-                }
-
-                if (isFirstMessage) {
-                    resultBox.value = event.data + "\n";
-                    isFirstMessage = false;
-                } else {
-                    resultBox.value += event.data + "\n";
-                }
+            try {
+                // 模拟进度
+                setTimeout(() => { progressBar.style.width = '30%'; }, 100);
                 
-                const currentProgress = parseFloat(progressBar.style.width);
-                if (currentProgress < 90) {
-                    progressBar.style.width = (currentProgress + 10) + '%';
-                }
-            };
+                resultBox.value += "正在构建请求 URL...\n";
+                const requestUrl = `${n8nWebhookUrl}?option=${encodeURIComponent(selectedOption)}&timestamp=${new Date().getTime()}`;
+                resultBox.value += `准备向此地址发送请求: ${n8nWebhookUrl}\n`;
 
-            eventSource.onerror = function() {
-                resultBox.value += "\n连接出错或被服务器关闭。";
-                eventSource.close();
-                resetUI();
-            };
+                setTimeout(() => { progressBar.style.width = '60%'; }, 500);
+                resultBox.value += "正在发送网络请求 (fetch)...\n";
+
+                const response = await fetch(requestUrl);
+                
+                resultBox.value += `已收到网络响应。HTTP状态码: ${response.status}\n`;
+                progressBar.style.width = '90%';
+
+                if (!response.ok) {
+                    throw new Error(`网络响应不成功: ${response.status} ${response.statusText}`);
+                }
+
+                resultBox.value += "正在读取响应内容...\n";
+                const responseText = await response.text();
+                
+                progressBar.style.width = '100%';
+                resultBox.value = responseText; // 成功后，用最终结果覆盖调试信息
+
+            } catch (error) {
+                console.error('请求n8n工作流时出错:', error);
+                progressBar.style.width = '100%'; // 即使出错也完成进度条
+                progressBar.classList.add('bg-red-500'); // 将进度条变为红色以示错误
+                
+                // 显示更详细的错误信息
+                resultBox.value += `\n执行工作流时发生严重错误: ${error.message}\n\n` +
+                    "--- 请检查以下几点 ---\n" +
+                    "1. 在浏览器中按 F12 打开开发者工具，查看“控制台(Console)”中是否有关于 CORS policy 的红色错误信息。\n" +
+                    "2. 确认您的 n8n Webhook URL 完全正确，并且对应的工作流处于“激活(Active)”状态。\n" +
+                    "3. 检查您的网络连接是否正常。";
+
+            } finally {
+                // 延迟一段时间后重置UI，以便用户能看到最终状态
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                    progressBar.classList.remove('bg-red-500'); // 移除错误状态的红色
+                    loader.classList.add('hidden');
+                    buttonText.textContent = '提交';
+                    submitButton.disabled = false;
+                }, 2000); // 2秒后重置
+            }
         });
     </script>
 </body>
