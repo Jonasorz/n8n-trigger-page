@@ -6,6 +6,8 @@
     <title>存储器件(DRAM颗粒/DDR模组)价格预测</title>
     <!-- 引入Tailwind CSS以实现现代化响应式设计 -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 重新引入 marked.js 用于解析 Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* 自定义样式 */
@@ -42,14 +44,55 @@
             }
         }
 
-        /* 为结果容器保留一些基本样式，确保内容不会溢出 */
-        #result-container {
-            line-height: 1.6;
+        /* 为渲染后的 Markdown 内容添加样式 */
+        #result-container h1, #result-container h2, #result-container h3, #result-container h4 {
+            font-weight: 600;
+            margin-top: 1.25em;
+            margin-bottom: 0.5em;
+            line-height: 1.2;
+            color: #1f2937;
         }
-        #result-container img {
-            max-width: 100%;
-            height: auto;
+        #result-container h1 { font-size: 1.5em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em;}
+        #result-container h2 { font-size: 1.25em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em;}
+        #result-container h3 { font-size: 1.1em; }
+        #result-container h4 { font-size: 1.0em; }
+        #result-container p { margin-bottom: 0.75em; line-height: 1.6; color: #4b5563; }
+        #result-container ul, #result-container ol {
+            margin-left: 1.5em;
+            margin-bottom: 1em;
+            color: #4b5563;
+        }
+        #result-container ul { list-style-type: disc; }
+        #result-container ol { list-style-type: decimal; }
+        #result-container li { margin-bottom: 0.25em; }
+        #result-container a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        #result-container strong {
+            color: #111827;
+        }
+        #result-container hr {
+            border-top: 1px solid #d1d5db;
+            margin: 2em 0;
+        }
+        #result-container code {
+            background-color: #e5e7eb;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-size: 85%;
+            color: #374151;
+        }
+        #result-container pre {
+            background-color: #f3f4f6;
+            padding: 1em;
             border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+        #result-container pre code {
+            background-color: transparent;
+            padding: 0;
         }
     </style>
 </head>
@@ -87,7 +130,7 @@
             <!-- 结果显示容器 -->
             <div class="space-y-2">
                 <label for="result-container" class="text-sm font-medium text-gray-700">结果</label>
-                <div id="result-container" class="w-full min-h-[10rem] p-3 bg-gray-50 border border-gray-300 rounded-lg transition">
+                <div id="result-container" class="w-full min-h-[10rem] p-4 bg-gray-50 border border-gray-300 rounded-lg transition">
                     <p class="text-gray-400">工作流返回的结果将显示在这里...</p>
                 </div>
             </div>
@@ -133,8 +176,8 @@
                 }
                 
                 const responseText = await response.text();
-                // 已修改：直接将返回的 HTML 字符串插入到容器中
-                resultContainer.innerHTML = responseText;
+                // 使用 marked.js 解析 Markdown 并插入到容器中
+                resultContainer.innerHTML = marked.parse(responseText);
 
             } catch (error) {
                 clearTimeout(timeoutId);
