@@ -38,7 +38,6 @@
             <!-- 下拉选项 -->
             <div class="space-y-2">
                 <label for="workflow-option" class="text-sm font-medium text-gray-700">选项</label>
-                <!-- 已修复：为每个选项设置了唯一的value -->
                 <select id="workflow-option" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                     <option value="DDR5 16G (2Gx8) 4800/5600">DDR5 16G (2Gx8) 4800/5600</option>
                     <option value="DDR4 16Gb (1Gx16)3200">DDR4 16Gb (1Gx16)3200</option>
@@ -52,11 +51,10 @@
             <!-- 提交按钮 -->
             <button id="submit-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center">
                 <span id="button-text">提交</span>
-                <!-- 加载动画 (默认隐藏) -->
                 <div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 ml-3 hidden"></div>
             </button>
 
-            <!-- 新增：进度条容器 (默认隐藏) -->
+            <!-- 进度条容器 -->
             <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden my-4">
                 <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-linear" style="width: 0%"></div>
             </div>
@@ -64,7 +62,7 @@
             <!-- 结果显示文本框 -->
             <div class="space-y-2">
                 <label for="result-box" class="text-sm font-medium text-gray-700">结果</label>
-                <textarea id="result-box" rows="8" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" readonly placeholder="工作流返回的结果将显示在这里..."></textarea>
+                <textarea id="result-box" rows="10" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" readonly placeholder="工作流返回的结果将显示在这里..."></textarea>
             </div>
         </div>
     </div>
@@ -79,59 +77,69 @@
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
 
-
         // 为提交按钮添加点击事件监听器
         submitButton.addEventListener('click', async () => {
-            // 已修复：移除了URL前多余的换行符和空格
             const n8nWebhookUrl = 'https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
-
-            // 检查是否已填写Webhook URL
-            if (n8nWebhookUrl === 'YOUR_N8N_WEBHOOK_URL_HERE') {
-                resultBox.value = '错误：请先在JavaScript代码中设置您的n8n Webhook URL。';
-                return;
-            }
-
             const selectedOption = optionSelect.value;
-
+            
             // --- UI更新：开始加载状态 ---
             submitButton.disabled = true;
             buttonText.textContent = '正在执行...';
             loader.classList.remove('hidden');
-            resultBox.value = '正在请求工作流，请稍候...';
-            
             progressContainer.classList.remove('hidden');
             progressBar.style.width = '0%';
-            setTimeout(() => {
-                progressBar.style.width = '70%'; 
-            }, 100);
-
+            
+            // --- 调试信息：在文本框中显示每一步 ---
+            resultBox.value = "按钮点击已识别。\n";
 
             try {
-                // 使用 encodeURIComponent 对选项值进行编码，防止特殊字符导致URL格式问题
+                // 模拟进度
+                setTimeout(() => { progressBar.style.width = '30%'; }, 100);
+                
+                resultBox.value += "正在构建请求 URL...\n";
                 const requestUrl = `${n8nWebhookUrl}?option=${encodeURIComponent(selectedOption)}&timestamp=${new Date().getTime()}`;
+                resultBox.value += `准备向此地址发送请求: ${n8nWebhookUrl}\n`;
+
+                setTimeout(() => { progressBar.style.width = '60%'; }, 500);
+                resultBox.value += "正在发送网络请求 (fetch)...\n";
+
                 const response = await fetch(requestUrl);
+                
+                resultBox.value += `已收到网络响应。HTTP状态码: ${response.status}\n`;
+                progressBar.style.width = '90%';
 
                 if (!response.ok) {
-                    throw new Error(`网络响应错误: ${response.status} ${response.statusText}`);
+                    throw new Error(`网络响应不成功: ${response.status} ${response.statusText}`);
                 }
 
+                resultBox.value += "正在读取响应内容...\n";
                 const responseText = await response.text();
-                resultBox.value = responseText;
+                
+                progressBar.style.width = '100%';
+                resultBox.value = responseText; // 成功后，用最终结果覆盖调试信息
 
             } catch (error) {
                 console.error('请求n8n工作流时出错:', error);
-                resultBox.value = `执行工作流时出错: ${error.message}\n\n请检查浏览器控制台获取更多信息，并确保n8n工作流配置正确。`;
+                progressBar.style.width = '100%'; // 即使出错也完成进度条
+                progressBar.classList.add('bg-red-500'); // 将进度条变为红色以示错误
+                
+                // 显示更详细的错误信息
+                resultBox.value += `\n执行工作流时发生严重错误: ${error.message}\n\n` +
+                    "--- 请检查以下几点 ---\n" +
+                    "1. 在浏览器中按 F12 打开开发者工具，查看“控制台(Console)”中是否有关于 CORS policy 的红色错误信息。\n" +
+                    "2. 确认您的 n8n Webhook URL 完全正确，并且对应的工作流处于“激活(Active)”状态。\n" +
+                    "3. 检查您的网络连接是否正常。";
+
             } finally {
-                // --- UI更新：结束加载状态 ---
-                progressBar.style.width = '100%';
+                // 延迟一段时间后重置UI，以便用户能看到最终状态
                 setTimeout(() => {
                     progressContainer.classList.add('hidden');
-                    progressBar.style.width = '0%'; 
-                }, 500); 
-
-                loader.classList.add('hidden');
-                buttonText.textContent = '提交';
-                submitButton.disabled = false;
+                    progressBar.style.width = '0%';
+                    progressBar.classList.remove('bg-red-500'); // 移除错误状态的红色
+                    loader.classList.add('hidden');
+                    buttonText.textContent = '提交';
+                    submitButton.disabled = false;
+                }, 2000); // 2秒后重置
             }
         });
     </script>
