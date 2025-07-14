@@ -38,13 +38,14 @@
             <!-- 下拉选项 -->
             <div class="space-y-2">
                 <label for="workflow-option" class="text-sm font-medium text-gray-700">选项</label>
+                <!-- 已修复：为每个选项设置了唯一的value -->
                 <select id="workflow-option" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    <option value="option1">DDR5 16G (2Gx8) 4800/5600</option>
-                    <option value="option2">DDR4 16Gb (1Gx16)3200</option>
-                    <option value="option3">DDR4 16Gb (2Gx8)3200</option>
-                    <option value="option3">DDR4 8Gb (1Gx8) 3200</option>
-                    <option value="option3">DDR4 8Gb (512Mx16) 3200</option>
-                    <option value="option3">DDR3 4Gb 512Mx8 1600/1866</option>
+                    <option value="DDR5 16G (2Gx8) 4800/5600">DDR5 16G (2Gx8) 4800/5600</option>
+                    <option value="DDR4 16Gb (1Gx16)3200">DDR4 16Gb (1Gx16)3200</option>
+                    <option value="DDR4 16Gb (2Gx8)3200">DDR4 16Gb (2Gx8)3200</option>
+                    <option value="DDR4 8Gb (1Gx8) 3200">DDR4 8Gb (1Gx8) 3200</option>
+                    <option value="DDR4 8Gb (512Mx16) 3200">DDR4 8Gb (512Mx16) 3200</option>
+                    <option value="DDR3 4Gb 512Mx8 1600/1866">DDR3 4Gb 512Mx8 1600/1866</option>
                 </select>
             </div>
 
@@ -75,16 +76,14 @@
         const resultBox = document.getElementById('result-box');
         const loader = document.getElementById('loader');
         const buttonText = document.getElementById('button-text');
-        // 新增：获取进度条元素
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
 
 
         // 为提交按钮添加点击事件监听器
         submitButton.addEventListener('click', async () => {
-            // *重要*：请将下面的URL替换为您自己的n8n Webhook URL
-            const n8nWebhookUrl = '
-https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
+            // 已修复：移除了URL前多余的换行符和空格
+            const n8nWebhookUrl = 'https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
 
             // 检查是否已填写Webhook URL
             if (n8nWebhookUrl === 'YOUR_N8N_WEBHOOK_URL_HERE') {
@@ -95,24 +94,21 @@ https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a';
             const selectedOption = optionSelect.value;
 
             // --- UI更新：开始加载状态 ---
-            // 禁用按钮并显示按钮内的加载图标
             submitButton.disabled = true;
             buttonText.textContent = '正在执行...';
             loader.classList.remove('hidden');
             resultBox.value = '正在请求工作流，请稍候...';
             
-            // 新增：显示并开始模拟进度条动画
             progressContainer.classList.remove('hidden');
             progressBar.style.width = '0%';
-            // 使用一个小的延时来确保CSS渲染了初始的0%宽度
             setTimeout(() => {
-                // 动画到70%来模拟处理过程
                 progressBar.style.width = '70%'; 
             }, 100);
 
 
             try {
-                const requestUrl = `${n8nWebhookUrl}?option=${selectedOption}&timestamp=${new Date().getTime()}`;
+                // 使用 encodeURIComponent 对选项值进行编码，防止特殊字符导致URL格式问题
+                const requestUrl = `${n8nWebhookUrl}?option=${encodeURIComponent(selectedOption)}&timestamp=${new Date().getTime()}`;
                 const response = await fetch(requestUrl);
 
                 if (!response.ok) {
@@ -127,15 +123,12 @@ https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a';
                 resultBox.value = `执行工作流时出错: ${error.message}\n\n请检查浏览器控制台获取更多信息，并确保n8n工作流配置正确。`;
             } finally {
                 // --- UI更新：结束加载状态 ---
-                // 新增：完成进度条动画并隐藏
                 progressBar.style.width = '100%';
                 setTimeout(() => {
                     progressContainer.classList.add('hidden');
-                    // 为下一次点击重置进度条
                     progressBar.style.width = '0%'; 
-                }, 500); // 0.5秒后隐藏
+                }, 500); 
 
-                // 恢复按钮状态
                 loader.classList.add('hidden');
                 buttonText.textContent = '提交';
                 submitButton.disabled = false;
