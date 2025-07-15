@@ -29,21 +29,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* 不确定进度条的动画 */
-        .progress-bar-indeterminate {
-            width: 40%; /* 滑块的宽度 */
-            animation: slide-indeterminate 2s ease-in-out infinite;
-        }
-
-        @keyframes slide-indeterminate {
-            0% {
-                transform: translateX(-125%); /* 从左侧屏幕外开始 */
-            }
-            100% {
-                transform: translateX(250%); /* 移动到右侧屏幕外结束 */
-            }
-        }
-
         /* 为渲染后的 Markdown 内容添加样式 */
         #result-container h1, #result-container h2, #result-container h3, #result-container h4 {
             font-weight: 600;
@@ -123,8 +108,8 @@
             </button>
 
             <!-- 进度条容器 -->
-            <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden my-4 overflow-hidden">
-                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full"></div>
+            <div id="progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden my-4">
+                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-200 ease-linear" style="width: 0%"></div>
             </div>
 
             <!-- 结果显示容器 -->
@@ -145,9 +130,14 @@
         const buttonText = document.getElementById('button-text');
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
+        
+        let progressIntervalId; // 用于存放计时器ID
 
         submitButton.addEventListener('click', async () => {
-            const TIMEOUT_DURATION = 600000; // 10 分钟
+            // --- 预估时长和超时设置 ---
+            const ESTIMATED_DURATION = 300000; // 预估总时长：5分钟 (300,000毫秒)
+            const TIMEOUT_DURATION = 600000;   // 网络请求超时：10分钟 (360,000毫秒)，比预估长一些
+            const UPDATE_INTERVAL = 200;      // 进度条更新频率 (毫秒)
 
             const n8nWebhookUrl = 'https://jonascz.xyz/webhook-test/386dd590-989d-4a4e-af59-a95729c2821a'; 
             const selectedOption = optionSelect.value;
@@ -158,8 +148,21 @@
             loader.classList.remove('hidden');
             resultContainer.innerHTML = '<p class="text-gray-500">正在请求工作流，请稍候...</p>';
             
+            // --- 启动基于时间的进度条 ---
             progressContainer.classList.remove('hidden');
-            progressBar.classList.add('progress-bar-indeterminate');
+            progressBar.style.width = '0%';
+            let currentProgress = 0;
+            const progressIncrement = (UPDATE_INTERVAL / ESTIMATED_DURATION) * 100;
+
+            progressIntervalId = setInterval(() => {
+                if (currentProgress < 95) { // 增长到95%后暂停，等待最终结果
+                    currentProgress += progressIncrement;
+                    progressBar.style.width = `${currentProgress}%`;
+                } else {
+                    clearInterval(progressIntervalId); // 避免超过95%
+                }
+            }, UPDATE_INTERVAL);
+
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_DURATION);
@@ -175,8 +178,9 @@
                     throw new Error(`网络响应错误: ${response.status} ${response.statusText}`);
                 }
                 
+                // 收到结果后，直接跳到100%
+                progressBar.style.width = '100%';
                 const responseText = await response.text();
-                // 使用 marked.js 解析 Markdown 并插入到容器中
                 resultContainer.innerHTML = marked.parse(responseText);
 
             } catch (error) {
@@ -192,8 +196,13 @@
                 console.error('请求n8n工作流时出错:', error);
             } finally {
                 // --- UI更新：结束加载状态 ---
-                progressBar.classList.remove('progress-bar-indeterminate');
-                progressContainer.classList.add('hidden');
+                clearInterval(progressIntervalId); // 确保计时器被清除
+
+                // 延迟隐藏进度条，让用户能看到100%的状态
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    progressBar.style.width = '0%'; // 为下一次点击重置
+                }, 1000);
 
                 loader.classList.add('hidden');
                 buttonText.textContent = '提交';
